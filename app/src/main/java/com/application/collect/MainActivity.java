@@ -1,13 +1,19 @@
 package com.application.collect;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -16,6 +22,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SensorManager sensorManager;
@@ -31,6 +38,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     /**
      * Called when the activity is first created.
      */
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -42,11 +50,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mDatabase = FirebaseDatabase.getInstance().getReference();
         // Write a message to the database
         final FirebaseDatabase database = FirebaseDatabase.getInstance();
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    Activity#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for Activity#requestPermissions for more details.
+            return;
+        }
+
+        mDatabase = database.getReference("/"+telephonyManager.getDeviceId());
 
         normalButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mDatabase = database.getReference("/normal");
                 if (normalButton.getText().toString().equals("Normal Data")) {
                     normalButton.setText("Stop");
                     registerListener("normal");
@@ -54,7 +74,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 } else {
                     normalButton.setText("Normal Data");
                     unregisterListener();
-                    mDatabase.setValue(sensorData);
+                    Map<String, Object> childUpdates = new HashMap<>();
+                    childUpdates.put("/normal", sensorData);
+                    mDatabase.updateChildren(childUpdates);
                     sensorData = new HashMap<>();
                 }
 
@@ -65,7 +87,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         anomalyButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mDatabase = database.getReference("/anomaly");
                 if (anomalyButton.getText().toString().equals("Anomaly Data")) {
                     anomalyButton.setText("Stop");
                     registerListener("anomaly");
@@ -73,7 +94,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 } else {
                     anomalyButton.setText("Anomaly Data");
                     unregisterListener();
-                    mDatabase.setValue(sensorData);
+                    Map<String, Object> childUpdates = new HashMap<>();
+                    childUpdates.put("/anomaly", sensorData);
+                    mDatabase.updateChildren(childUpdates);
                     sensorData = new HashMap<>();
                 }
             }
