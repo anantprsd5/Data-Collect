@@ -5,10 +5,17 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+
+import androidx.appcompat.app.AppCompatActivity;
+
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
+
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SensorManager sensorManager;
@@ -17,6 +24,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button normalButton;
     private Button anomalyButton;
     private String type;
+    private DatabaseReference mDatabase;
+    private DatabaseReference ref;
+    private HashMap<String, String> sensorData = new HashMap<>();
 
     /**
      * Called when the activity is first created.
@@ -29,9 +39,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         lastUpdate = System.currentTimeMillis();
         normalButton = findViewById(R.id.button);
         anomalyButton = findViewById(R.id.button2);
+        mDatabase = FirebaseDatabase.getInstance().getReference();
+        // Write a message to the database
+        final FirebaseDatabase database = FirebaseDatabase.getInstance();
+
         normalButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mDatabase = database.getReference("/normal");
                 if (normalButton.getText().toString().equals("Normal Data")) {
                     normalButton.setText("Stop");
                     registerListener("normal");
@@ -39,6 +54,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 } else {
                     normalButton.setText("Normal Data");
                     unregisterListener();
+                    mDatabase.setValue(sensorData);
+                    sensorData = new HashMap<>();
                 }
 
 
@@ -48,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         anomalyButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mDatabase = database.getReference("/anomaly");
                 if (anomalyButton.getText().toString().equals("Anomaly Data")) {
                     anomalyButton.setText("Stop");
                     registerListener("anomaly");
@@ -55,6 +73,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 } else {
                     anomalyButton.setText("Anomaly Data");
                     unregisterListener();
+                    mDatabase.setValue(sensorData);
+                    sensorData = new HashMap<>();
                 }
             }
         });
@@ -91,6 +111,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             Toast.makeText(this, "x = " + Float.toString(x) + "y= " + y + "z= " + z, Toast.LENGTH_SHORT)
                     .show();
+
+            sensorData.put(Long.toString(System.currentTimeMillis()),
+                    "x = " + Float.toString(x) + "y= " + y + "z= " + z);
+
 
         }
     }
